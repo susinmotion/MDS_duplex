@@ -17,7 +17,7 @@ int main(){  //file config.cfg contains a list of config files
     cout <<"read file"<<endl;  
     
 
-    //trie->printTrieImportantOnly();
+    trie->printTrieImportantOnly();
     trie->populateAndPrintVariants();
     trie->printCounts();       
    // trie->printTrie();

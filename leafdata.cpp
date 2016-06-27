@@ -5,15 +5,21 @@
 #include <iostream>
 using namespace std;
 
-int LeafData::count() {
-    return mCount;
+int LeafData::fwdCount() {
+    return mFwdCount;
 }
 int LeafData::revCount() {
     return mRevCount;
 }
-
+int LeafData::count() {
+    return mCount;
+}
 void LeafData::setCount() {
-    mCount++; 
+    mCount++;
+}
+
+void LeafData::setFwdCount() {
+    mFwdCount++; 
 }
 void LeafData::setRevCount(){
    mRevCount++;

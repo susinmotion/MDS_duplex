@@ -45,9 +45,12 @@ void Trie::addBarcode(int ROINumber, int phase, string barcode, string sequence,
                 pCurrentData=new LeafData;
             }
             checkVariants(sequence, target, pCurrentData);
-            pCurrentData->setCount();
+	    pCurrentData->setCount();
 	    if (rev==true){
 		pCurrentData->setRevCount();
+	    }
+    	    else{
+ 	           pCurrentData->setFwdCount();
 	    }
             pCurrentNode->setLeafData(ROINumber, phase, pCurrentData);
             if (pCurrentNode->leafData()[ROINumber][phase]->count()==mThresholdsOfImportance[0]){//if there are enough reads, add pointer to list of important nodes for output later
@@ -55,6 +58,7 @@ void Trie::addBarcode(int ROINumber, int phase, string barcode, string sequence,
             }
             if (pCurrentNode->leafData()[ROINumber][phase]->count()>=mThresholdsOfImportance[0] && pCurrentNode->leafData()[ROINumber][phase]->count()<=200){
                 mCounts[ROINumber][phase][pCurrentNode->leafData()[ROINumber][phase]->count()]++;
+		//do something with min counts etc here
             }
         }
     }
@@ -63,25 +67,39 @@ void Trie::addBarcode(int ROINumber, int phase, string barcode, string sequence,
 void Trie::printCounts(){
     ofstream outfile2;
     outfile2.open("total_counts.txt");
-    int counts [mNumberOfROIs];
+    ofstream minoutfile;
+    minoutfile.open("total_mincounts.txt");
+    vector <int> counts(mNumberOfROIs,0);
+   
     for (int i=0; i<mNumberOfROIs; ++i){
         ofstream outfile;
         string outfilename="counts_"+mGenes[i]+".txt";
         outfile.open(outfilename.c_str());
-        counts[i]=0;
+        ofstream minoutfilelocal;
+	minoutfilelocal.open( ("mincounts_"+mGenes[i]+".txt").c_str() );
+	counts[i]=0;
         outfile<<"ROI "<<mGenes[i]<<endl;
         outfile2<<"ROI "<<mGenes[i]<<" ";
+	//minoutfile<<"ROI "<<mGenes[i]<<endl;
+	minoutfilelocal<<"ROI "<<mGenes[i]<<" ";
         cout<<"ROI "<<mGenes[i]<<endl;
         for (int j=0; j<mNumberOfPhases; ++j){
             outfile<<" phase "<<j<<":"<<endl;
+	    minoutfilelocal<<" phase "<<j<<":"<<endl;
             for (int k=0; k<mCounts[i][j].size()-1; ++k){
 	        if (mCounts[i][j][k]-mCounts[i][j][k+1]>0){
                     outfile<<"  "<<mCounts[i][j][k]-mCounts[i][j][k+1]<<" nodes were found exactly "<<k<<" times"<<endl;
                     counts[i]+=mCounts[i][j][k]-mCounts[i][j][k+1];
 		}
             }
-        }
+	    for (int k=0;k<mMinCounts[i][j].size(); ++k){
+		if (mMinCounts[i][j][k]>0){
+        		minoutfilelocal<<" "<<mMinCounts[i][j][k]<<" nodes were found exactly "<<k<<" times"<<endl;
+		}
+	    }
+	}
         outfile2<<counts[i]<<endl;
+	//minoutfile<<mincounts[i]<<endl;
     }
 }
 void Trie::setThresholdROIPhaseGenesBarcodelenTargetlen(vector <int> threshold, int numberOfROIs, int numberOfPhases, vector<string>genes, int barcodeLength, vector <int> targetLength){
@@ -93,6 +111,7 @@ void Trie::setThresholdROIPhaseGenesBarcodelenTargetlen(vector <int> threshold, 
     set <Node*> empty_set;
     mImportantNodes=vector <vector <set <Node*> > >(mNumberOfROIs, vector<set<Node* > >(mNumberOfPhases, empty_set));
     mBarcodeLength=barcodeLength;
+    mMinCounts=vector< vector <vector<int> > >(mNumberOfROIs, vector< vector <int> >(mNumberOfPhases,vector <int>(200,0)));
     mCounts=vector< vector <vector<int> > >(mNumberOfROIs, vector< vector <int> >(mNumberOfPhases,vector <int>(200,0)));
 }
 
@@ -122,7 +141,7 @@ void Trie::populateVariants(int threshold){
             while (!currentImportantNodes.empty()){//go through important nodes and increment value in variant counts hash array as varaints are found. 
                 LeafData* currentData=(*currentImportantNodes.begin())->leafData()[i][j];
                 totalImportantNodes++;
-                if(currentData->count()>=threshold&& currentData->revCount()>=threshold){
+                if(currentData->fwdCount()>=threshold&& currentData->revCount()>=threshold){
                     if (currentData!=NULL){
                         mNodesChecked[i][j]++;
                        if (!currentData->isTrash()){
@@ -159,7 +178,8 @@ void Trie::populateVariants(int threshold){
 }
 
 void Trie::printTrieImportantOnly(Node* pCurrentNode, string barcode, int index){
-//this function needs to be called before populate variants
+//this function needs to be called before populate variants. 
+//This is needed for mincounts at this pont. can remove the summary file lines to just takec are of mincounts
     if ( pCurrentNode == NULL ){//if this is the first iteration, set current at root of trie
         pCurrentNode = mRootPointer;
         cout<<"Barcode Count"<<endl;
@@ -185,6 +205,11 @@ void Trie::printTrieImportantOnly(Node* pCurrentNode, string barcode, int index)
                 if (currentData!=NULL && !currentData->isTrash() && mImportantNodes[i][j].find(pCurrentNode)!=mImportantNodes[i][j].end() ){
                     summaryFile<<barcode<<" "<<mGenes[i]<<" phase "<<j<<endl;
                     summaryFile<<currentData->count()<<" reads"<<endl;
+		    int minCount=min(currentData->fwdCount(), currentData->revCount());
+		    cout<<minCount<<" min couht"<<endl;
+			if (minCount<200){
+		    	mMinCounts[i][j][min(currentData->fwdCount(), currentData->revCount())]++;
+		    }
                     if (!currentData->substitutions().empty()){
                         for (int q=0; q<currentData->substitutions().size(); ++q){
                             summaryFile<<" "<<unhashSubstitutions(currentData->substitutions()[q]).first<<" "<< unhashSubstitutions(currentData->substitutions()[q]).second<<endl;
