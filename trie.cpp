@@ -203,25 +203,27 @@ void Trie::printTrieImportantOnly(Node* pCurrentNode, string barcode, int index)
             for (int j=0; j<mNumberOfPhases; ++j){
                 LeafData* currentData= pCurrentNode->leafData()[i][j];
                 if (currentData!=NULL && !currentData->isTrash() && mImportantNodes[i][j].find(pCurrentNode)!=mImportantNodes[i][j].end() ){
-                    summaryFile<<barcode<<" "<<mGenes[i]<<" phase "<<j<<endl;
-                    summaryFile<<currentData->count()<<" reads"<<endl;
-		    int minCount=min(currentData->fwdCount(), currentData->revCount());
-		    cout<<minCount<<" min couht"<<endl;
-			if (minCount<200){
-		    	mMinCounts[i][j][min(currentData->fwdCount(), currentData->revCount())]++;
-		    }
-                    if (!currentData->substitutions().empty()){
-                        for (int q=0; q<currentData->substitutions().size(); ++q){
-                            summaryFile<<" "<<unhashSubstitutions(currentData->substitutions()[q]).first<<" "<< unhashSubstitutions(currentData->substitutions()[q]).second<<endl;
-                        }
-                    }
+                    	if (currentData->fwdCount()>=3 && currentData->revCount()>=3){
+				summaryFile<<barcode<<" "<<mGenes[i]<<" phase "<<j<<endl;
+                    		summaryFile<<currentData->count()<<" reads"<<endl;
+                    		if (!currentData->substitutions().empty()){
+                        		for (int q=0; q<currentData->substitutions().size(); ++q){
+                            			summaryFile<<" "<<unhashSubstitutions(currentData->substitutions()[q]).first<<" "<< unhashSubstitutions(currentData->substitutions()[q]).second<<endl;
+                        		}
+				}
+                    
                 
-                    if (currentData->hasIndel()){                   
-                        summaryFile<<currentData->indel().first<<" "<<currentData->indel().second<<endl;
-}
-                }
+                    		if (currentData->hasIndel()){                   
+                        		summaryFile<<currentData->indel().first<<" "<<currentData->indel().second<<endl;
+				}	
+              		}
+              		int minCount=min(currentData->fwdCount(), currentData->revCount());
+              		if (minCount<200){
+                    		mMinCounts[i][j][min(currentData->fwdCount(), currentData->revCount())]++;
+              		}	
+		}
             }
-        summaryFile.close();
+        	summaryFile.close();
        }
 
        return;
